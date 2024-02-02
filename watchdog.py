@@ -1,13 +1,13 @@
 ### BEGIN CONFIG AREA ###
-SERVER_IP = '127.0.0.1'
+SERVER_IP = '192.168.1.199'
 RCON_PORT = 25575
 RCON_PASSWORD = 'RCON_PASSWORD_HERE'
 
-#Seconds between loops of checking players list
+#Seconds between loops
 LOOP_INTERVAL = 5
 JOIN_LEAVE_NOTIFICATIONS = True
 
-#how often to print the entire players list out to console
+#how often to print the entire players list out
 PRINT_PLAYERS_LIST_INTERVAL = 900
 
 
@@ -20,31 +20,29 @@ from time import sleep
 import sys
 from datetime import datetime
 import os
+import logging
 
-try:
-	from loguru import logger
-except:
-	print('Missing module loguru. Install with: pip install loguru')
-	sys.exit(1)
+
+logging.basicConfig(level=logging.WARNING)
 
 try:
 	from importlib.metadata import version
 except:
-	print('Missing module importlib_metadata. Install with: pip install importlib_metadata')
+	logging.error('Missing module importlib_metadata. Install with: pip install importlib_metadata')
 	sys.exit(1)
-
 try:
 	import rcon
 	from rcon.source import Client
-	if not (version('rcon') == '0.1.dev291+gc384311'):
+	rconVersion = version('rcon')[0:10]
+	logging.debug(rconVersion)
+	if not (rconVersion == '2.4.5.dev8'):
 		raise Exception
 except:
-	print('Need a specific rcon module! Palworld is dumb and needs an unmerged PR currently. Install with:')
-	print('pip install git+https://github.com/fossum/rcon.git@feature/add-enforce-labels-flag')
+	logging.error('RCON Version: ' + rconVersion)
+	logging.error('Needs the dev rcon version! Palworld is dumb and needs the dev version currently. Install with:')
+	logging.error('pip install git+pip install git+https://github.com/conqp/rcon.git') 
 	sys.exit(1)
 
-logger.remove()
-logger.add(sys.stderr, level="INFO")
 
 
 def parsePlayersList(playersString):
@@ -52,10 +50,10 @@ def parsePlayersList(playersString):
 	playersDict = {}
 	#remove header
 	stringList.pop(0)
-	logger.debug('stringList')
+	logging.debug('stringList')
 	for playerEntry in stringList:
 		playerEntryListified = playerEntry.split(',')
-		logger.debug(playerEntryListified)
+		logging.debug(playerEntryListified)
 		playersDict[playerEntryListified[0]] = {"playeruid": playerEntryListified[1], "steamid": playerEntryListified[2]}
 	#name,playeruid,steamid
 	#Kupie,4160040412,76561197993593793
@@ -75,16 +73,15 @@ def sendJoinedOrLeftPlayers(NewPlayersList, OldPlayersList):
 	if joinedPlayers:
 		#Send info about joined/left players. Palworld doesn't currently support spaces in broadcasts so we use ascii character 1F....
 		for playerJoined in joinedPlayers:
-			sendString = playerJoined + ' joined'
+			sendString = 'Joined: ' + playerJoined
 			rconSendCommand('broadcast', sendString)
 			print(sendString)
-		logger.debug('Joined:', joinedPlayers)
 	if leftPlayers:
 		for playerLeft in leftPlayers:
-			sendString = playerLeft + ' left'
+			sendString = 'Left: ' + playerLeft
 			rconSendCommand('broadcast', sendString)
 			print(sendString)
-		logger.debug('Left:', leftPlayers)
+		
 	
 
 def printAllPlayersToconsole(timePrintedPlayersLast, PlayersList):
@@ -120,7 +117,7 @@ def rconSendCommand(command: str, args: str = ''):
 		else:
 			command = command + " " + " ".join(args)
 
-		logger.debug('Sending command: ' + command)
+		logging.debug('Sending command: ' + command)
 		return client.run(command, enforce_id=False)
 	
 timePrintedPlayersLast = datetime.min
@@ -134,7 +131,7 @@ def main():
 	
 	
 	NewPlayersList = parsePlayersList(rconSendCommand('ShowPlayers'))
-	logger.debug(NewPlayersList)
+	logging.debug(NewPlayersList)
 	
 	# If join/leave notifications is turned on, and it's NOT the first run... otherwise the script
 	# prints out all players as "Joined" when it first runs
@@ -145,9 +142,9 @@ def main():
 	timePrintedPlayersLast = printAllPlayersToconsole(timePrintedPlayersLast, PlayersList)
 
 	firstRun = False
-	logger.debug(NewPlayersList)
-	logger.debug(list(NewPlayersList))
-	logger.debug('Main loop ran. Waiting ' + str(LOOP_INTERVAL) + 's to run again')
+	logging.debug(NewPlayersList)
+	logging.debug(list(NewPlayersList))
+	logging.debug('Main loop ran. Waiting ' + str(LOOP_INTERVAL) + 's to run again')
 
 	
 if __name__ == "__main__":
