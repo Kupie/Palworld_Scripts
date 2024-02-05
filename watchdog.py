@@ -1,5 +1,5 @@
 ### BEGIN CONFIG AREA ###
-SERVER_IP = '192.168.1.199'
+SERVER_IP = '127.0.0.1'
 RCON_PORT = 25575
 RCON_PASSWORD = 'RCON_PASSWORD_HERE'
 
@@ -23,7 +23,7 @@ import os
 import logging
 
 
-logging.basicConfig(level=logging.WARNING)
+#logging.basicConfig(level=logging.DEBUG)
 
 try:
 	from importlib.metadata import version
@@ -33,16 +33,23 @@ except:
 try:
 	import rcon
 	from rcon.source import Client
-	rconVersion = version('rcon')[0:10]
-	logging.debug(rconVersion)
-	if not (rconVersion == '2.4.5.dev8'):
+	rconVersion = version('rcon')
+	rconVersionNum = rconVersion.split('.')
+	rconVersionNum = [int(i) for i in rconVersionNum]
+	logging.debug(rconVersionNum[0])
+	logging.debug(rconVersionNum[1])
+	logging.debug(rconVersionNum[2])
+	
+	if not (rconVersionNum[0] >= 2 and
+			rconVersionNum[1] >= 4 and
+			rconVersionNum[2] >= 6):
 		raise Exception
-except:
+except Exception as e:
+	logging.debug(str(e))
 	logging.error('RCON Version: ' + rconVersion)
 	logging.error('Needs the dev rcon version! Palworld is dumb and needs the dev version currently. Install with:')
-	logging.error('pip install git+pip install git+https://github.com/conqp/rcon.git') 
+	logging.error('pip install git+https://github.com/conqp/rcon.git') 
 	sys.exit(1)
-
 
 
 def parsePlayersList(playersString):
@@ -155,3 +162,11 @@ if __name__ == "__main__":
 		except KeyboardInterrupt:
 			print('CTRL+C hit. Exiting...')
 			sys.exit(0)
+		except ConnectionRefusedError:
+			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 30 seconds...')
+			sleep(30)
+		except Exception as e:
+			logging.warning('Got this error, trying again in 30 seconds:')
+			logging.warning(str(e))
+			sleep(30)
+			pass
