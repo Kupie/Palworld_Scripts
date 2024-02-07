@@ -1,7 +1,7 @@
 ### BEGIN CONFIG AREA ###
 SERVER_IP = '127.0.0.1'
 RCON_PORT = 25575
-RCON_PASSWORD = 'RCON_PASSWORD_HERE'
+RCON_PASSWORD = 'RCON_SERVER_PASSWORD'
 
 #Seconds between loops
 LOOP_INTERVAL = 5
@@ -67,12 +67,19 @@ def parsePlayersList(playersString):
 	return playersDict
 
 def sendJoinedOrLeftPlayers(NewPlayersList, OldPlayersList):
+	
+	#Check for players not loaded yet, skip till next iteration if they exist
+	#print(NewPlayersList)
+	for playerList in NewPlayersList:
+		if NewPlayersList[playerList]['playeruid'] == '00000000':
+			print('Unloaded player found, skipping joined/left messages this run')
+			return OldPlayersList
 
 	set1 = set(NewPlayersList)
 	set2 = set(OldPlayersList)
 	
 	if (set1 == set2):
-		return
+		return NewPlayersList
 		
 	joinedPlayers = list(sorted(set1 - set2))
 	leftPlayers = list(sorted(set2 - set1))
@@ -82,21 +89,25 @@ def sendJoinedOrLeftPlayers(NewPlayersList, OldPlayersList):
 		for playerJoined in joinedPlayers:
 			sendString = 'Joined: ' + playerJoined
 			rconSendCommand('broadcast', sendString)
-			print(sendString)
+			print(sendString + str(NewPlayersList[playerJoined]))
 	if leftPlayers:
 		for playerLeft in leftPlayers:
 			sendString = 'Left: ' + playerLeft
 			rconSendCommand('broadcast', sendString)
-			print(sendString)
+			print(sendString + str(OldPlayersList[playerLeft]))
+	return NewPlayersList
 		
 	
 
 def printAllPlayersToconsole(timePrintedPlayersLast, PlayersList):
 	if ((datetime.now()- timePrintedPlayersLast).total_seconds() > PRINT_PLAYERS_LIST_INTERVAL):
 		PlayersStringList = []
+		print('Current Players: Name, UID, SteamID')
 		for PlayersDict in PlayersList:
 			PlayersStringList.append(PlayersDict)
-		print('Current Players: ' + ",".join(PlayersStringList)) 
+			playerInfo = PlayersDict + ', ' + PlayersList[PlayersDict]['playeruid'] + ', ' + PlayersList[PlayersDict]['steamid']
+			print(playerInfo)
+		#print('Current Players: ' + ",".join(PlayersStringList)) 
 		return datetime.now()
 	else:
 		return timePrintedPlayersLast
@@ -143,8 +154,9 @@ def main():
 	# If join/leave notifications is turned on, and it's NOT the first run... otherwise the script
 	# prints out all players as "Joined" when it first runs
 	if (JOIN_LEAVE_NOTIFICATIONS & (not firstRun)):
-		sendJoinedOrLeftPlayers(NewPlayersList, PlayersList)
-	PlayersList = NewPlayersList
+		PlayersList = sendJoinedOrLeftPlayers(NewPlayersList, PlayersList)
+	else:
+		PlayersList = NewPlayersList
 	
 	timePrintedPlayersLast = printAllPlayersToconsole(timePrintedPlayersLast, PlayersList)
 
@@ -163,10 +175,10 @@ if __name__ == "__main__":
 			print('CTRL+C hit. Exiting...')
 			sys.exit(0)
 		except ConnectionRefusedError:
-			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 30 seconds...')
-			sleep(30)
+			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 15 seconds...')
+			sleep(15)
 		except Exception as e:
-			logging.warning('Got this error, trying again in 30 seconds:')
+			logging.warning('Got this error, trying again in 15 seconds:')
 			logging.warning(str(e))
-			sleep(30)
+			sleep(15)
 			pass
