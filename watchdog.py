@@ -1,7 +1,7 @@
 ### BEGIN CONFIG AREA ###
 SERVER_IP = '127.0.0.1'
 RCON_PORT = 25575
-RCON_PASSWORD = 'RCON_SERVER_PASSWORD'
+RCON_PASSWORD = 'RCON_SERVER_PASSWORD_HERE'
 
 #Seconds between loops
 LOOP_INTERVAL = 5
@@ -165,8 +165,8 @@ def main():
 	logging.debug(list(NewPlayersList))
 	logging.debug('Main loop ran. Waiting ' + str(LOOP_INTERVAL) + 's to run again')
 
-	
 if __name__ == "__main__":
+	failedConnections = 0
 	while True:
 		try:
 			main()
@@ -175,8 +175,16 @@ if __name__ == "__main__":
 			print('CTRL+C hit. Exiting...')
 			sys.exit(0)
 		except ConnectionRefusedError:
+			failedConnections +=1
+			if (failedConnections >= 4):
+				print('SERVER DOWN AFTER 5 TRIES, RESTARTING')
+				os.system('SCHTASKS /RUN /TN "Restart Palserver NOW MANUAL-ONLY"')
+				failedConnections = 0
+				sleep(45)
 			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 15 seconds...')
+			print('Times Failed: ' + str(failedConnections))
 			sleep(15)
+			
 		except Exception as e:
 			logging.warning('Got this error, trying again in 15 seconds:')
 			logging.warning(str(e))
