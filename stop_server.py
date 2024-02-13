@@ -1,10 +1,10 @@
-### BEGIN CONFIG AREA ###
-SERVER_IP = '127.0.0.1'
-RCON_PORT = 25575
-RCON_PASSWORD = 'RCON_PASSWORD_HERE'
-
-
-#### CONFIG AREA ABOVE ####
+#### CONFIG READER ####
+import configparser
+config = configparser.ConfigParser()
+config.read('config.ini')
+SERVER_IP = str(config['default']['SERVER_IP'])
+RCON_PORT = int(config['default']['RCON_PORT'])
+RCON_PASSWORD = str(config['default']['RCON_PASSWORD'])
 
 #### BEGIN REAL SCRIPT SHIT ####
 
@@ -112,11 +112,19 @@ def main():
 		print('Server not running bruh')
 		sys.exit(0)
 	
-	#Check again after running stopServerNicely and waiting 30 seconds
-	sleep(30)
+	#Check again after running stopServerNicely and waiting 30 seconds, checking every 5 seconds if it stopped yet
+	for i in range(1,30):
+		if isServerRunning():
+			sleep(1)
+			print('Server still running: ' + str(i))
+		else:
+			print('Server exited')
+			sys.exit(0)
 	if isServerRunning():
 		print('Server still running. Stopping rudely...')
 		stopServerRudely()
+	else:
+		sys.exit(0)
 	sleep(5)
 	if isServerRunning():
 		print('Server STILL RUNNING. Killing server...')

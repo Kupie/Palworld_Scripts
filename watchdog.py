@@ -1,18 +1,13 @@
-### BEGIN CONFIG AREA ###
-SERVER_IP = '127.0.0.1'
-RCON_PORT = 25575
-RCON_PASSWORD = 'RCON_SERVER_PASSWORD_HERE'
-
-#Seconds between loops
-LOOP_INTERVAL = 5
-JOIN_LEAVE_NOTIFICATIONS = True
-
-#how often to print the entire players list out
-PRINT_PLAYERS_LIST_INTERVAL = 900
-
-
-
-#### CONFIG AREA ABOVE ####
+#### CONFIG READER ####
+import configparser
+config = configparser.ConfigParser()
+config.read('config.ini')
+SERVER_IP = str(config['default']['SERVER_IP'])
+RCON_PORT = int(config['default']['RCON_PORT'])
+RCON_PASSWORD = str(config['default']['RCON_PASSWORD'])
+LOOP_INTERVAL = int(config['watchdog']['LOOP_INTERVAL'])
+JOIN_LEAVE_NOTIFICATIONS = bool(config['watchdog']['JOIN_LEAVE_NOTIFICATIONS'])
+PRINT_PLAYERS_LIST_INTERVAL = int(config['watchdog']['PRINT_PLAYERS_LIST_INTERVAL'])
 
 #### BEGIN REAL SCRIPT SHIT ####
 
@@ -22,8 +17,13 @@ from datetime import datetime
 import os
 import logging
 
+logname = os.path.normpath("C:/Users/Admin/Desktop/PALWORLD_SCRIPTS/Watchdog_Log.txt")
+logging.basicConfig(filename=logname,
+                    filemode='a',
+					format='%(asctime)s |:| LEVEL: %(levelname)s |:| %(message)s',
+					datefmt='%Y-%m-%d %H:%M:%S',
+                    level=logging.INFO)
 
-#logging.basicConfig(level=logging.DEBUG)
 
 try:
 	from importlib.metadata import version
@@ -134,13 +134,22 @@ def rconSendCommand(command: str, args: str = ''):
 			command = command + " " + args.replace(" ", "\x1F")
 		else:
 			command = command + " " + " ".join(args)
-
-		logging.debug('Sending command: ' + command)
+		
+		if command.lower() != "showplayers ":
+			logging.info('Sending command: ' + command)
 		return client.run(command, enforce_id=False)
+
+
+def serverIsDownOhShit():
+	logging.error('SERVER DOWN AFTER 5 TRIES, RESTARTING')
+	os.system('SCHTASKS /RUN /TN "Restart Palserver NOW MANUAL-ONLY"')
+	sleep(45)
+	
 	
 timePrintedPlayersLast = datetime.min
 
 firstRun = True
+
 
 def main():
 	global timePrintedPlayersLast
@@ -166,6 +175,7 @@ def main():
 	logging.debug('Main loop ran. Waiting ' + str(LOOP_INTERVAL) + 's to run again')
 
 if __name__ == "__main__":
+	logging.info('Welcome to watchdog!')
 	failedConnections = 0
 	while True:
 		try:
@@ -177,16 +187,16 @@ if __name__ == "__main__":
 		except ConnectionRefusedError:
 			failedConnections +=1
 			if (failedConnections >= 4):
-				print('SERVER DOWN AFTER 5 TRIES, RESTARTING')
-				os.system('SCHTASKS /RUN /TN "Restart Palserver NOW MANUAL-ONLY"')
-				failedConnections = 0
-				sleep(45)
+				serverIsDownOhShit()
 			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 15 seconds...')
-			print('Times Failed: ' + str(failedConnections))
+			logging.warning('Times Failed: ' + str(failedConnections))
 			sleep(15)
 			
 		except Exception as e:
 			logging.warning('Got this error, trying again in 15 seconds:')
 			logging.warning(str(e))
+			failedConnections +=1
+			if (failedConnections >= 4):
+				serverIsDownOhShit()
+			logging.warning('Times Failed: ' + str(failedConnections))
 			sleep(15)
-			pass
