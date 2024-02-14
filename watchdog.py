@@ -1,13 +1,16 @@
 #### CONFIG READER ####
-import configparser
+import configparser, pathlib
 config = configparser.ConfigParser()
-config.read('config.ini')
+config_path = pathlib.Path(__file__).parent.absolute() / "config.ini"
+config = configparser.ConfigParser()
+config.read(config_path)
 SERVER_IP = str(config['default']['SERVER_IP'])
 RCON_PORT = int(config['default']['RCON_PORT'])
 RCON_PASSWORD = str(config['default']['RCON_PASSWORD'])
 LOOP_INTERVAL = int(config['watchdog']['LOOP_INTERVAL'])
 JOIN_LEAVE_NOTIFICATIONS = bool(config['watchdog']['JOIN_LEAVE_NOTIFICATIONS'])
 PRINT_PLAYERS_LIST_INTERVAL = int(config['watchdog']['PRINT_PLAYERS_LIST_INTERVAL'])
+
 
 #### BEGIN REAL SCRIPT SHIT ####
 
@@ -186,7 +189,7 @@ if __name__ == "__main__":
 			sys.exit(0)
 		except ConnectionRefusedError:
 			failedConnections +=1
-			if (failedConnections >= 4):
+			if (failedConnections >= 5):
 				serverIsDownOhShit()
 			logging.warning('Connection failed! Maybe palworld server is down? Trying again in 15 seconds...')
 			logging.warning('Times Failed: ' + str(failedConnections))
@@ -196,7 +199,7 @@ if __name__ == "__main__":
 			logging.warning('Got this error, trying again in 15 seconds:')
 			logging.warning(str(e))
 			failedConnections +=1
-			if (failedConnections >= 4):
+			if (failedConnections >= 5):
 				serverIsDownOhShit()
 			logging.warning('Times Failed: ' + str(failedConnections))
 			sleep(15)

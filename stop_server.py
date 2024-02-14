@@ -1,7 +1,9 @@
 #### CONFIG READER ####
-import configparser
+import configparser, pathlib
 config = configparser.ConfigParser()
-config.read('config.ini')
+config_path = pathlib.Path(__file__).parent.absolute() / "config.ini"
+config = configparser.ConfigParser()
+config.read(config_path)
 SERVER_IP = str(config['default']['SERVER_IP'])
 RCON_PORT = int(config['default']['RCON_PORT'])
 RCON_PASSWORD = str(config['default']['RCON_PASSWORD'])
